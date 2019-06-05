@@ -2,8 +2,6 @@
 LayerCode: Optical Barcodes for 3D Printed Shapes
 
 In this folder:
-
-Supplemental
 ├── compressed-dataset
 ├── hardware-modification
 └── matlab
