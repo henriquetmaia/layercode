@@ -1,0 +1,84 @@
+From e1bcea7ddb6f1ce83d1b635955ebddb06821057e Mon Sep 17 00:00:00 2001
+From: henriquetmaia <henriquetmaia@gmail.com>
+Date: Thu, 12 Apr 2018 15:57:17 -0400
+Subject: [PATCH 3/5] added ModelRotationApproachMilliDegrees to the
+ layersettings options, allowing a different approach rotation than the
+ standard one used for separation
+
+---
+ C++/Motor.cpp               | 2 +-
+ C++/PrintEngine.cpp         | 3 ++-
+ C++/Settings.cpp            | 1 +
+ C++/include/LayerSettings.h | 1 +
+ C++/include/Settings.h      | 1 +
+ 5 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/C++/Motor.cpp b/C++/Motor.cpp
+index 27925e6b..770b2ba6 100644
+--- a/C++/Motor.cpp
++++ b/C++/Motor.cpp
+@@ -267,7 +267,7 @@ bool Motor::Approach(const CurrentLayerSettings& cls, bool unJamFirst)
+     commands.push_back(MotorCommand(MC_ROT_SETTINGS_REG, MC_SPEED, 
+                                     cls.ApproachRPM * R_SPEED_FACTOR));
+     
+-    int rotation = cls.RotationMilliDegrees / R_SCALE_FACTOR;
++    int rotation = cls.RotationApproachMilliDegrees / R_SCALE_FACTOR;
+     if (rotation != 0)
+     {
+         // see if we should use homing on approach, to avoid not rotating far 
+diff --git a/C++/PrintEngine.cpp b/C++/PrintEngine.cpp
+index b8690a00..1eb8868c 100644
+--- a/C++/PrintEngine.cpp
++++ b/C++/PrintEngine.cpp
+@@ -1345,10 +1345,11 @@ double PrintEngine::GetLayerTimeSec(LayerType type)
+             time = (double) _settings.GetDouble(MODEL_EXPOSURE);
+             time += _settings.GetInt(ML_APPROACH_WAIT) / 1000.0;    
+             revs = _settings.GetInt(ML_ROTATION) / MILLIDEGREES_PER_REV;
++            revsApp = _settings.GetInt(ML_ROTATION_APPROACH) / MILLIDEGREES_PER_REV;
+             time += (revs / _settings.GetInt(ML_SEPARATION_R_SPEED)) * 60.0;
+             zLift = _settings.GetInt(ML_Z_LIFT);
+             time += zLift / _settings.GetInt(ML_SEPARATION_Z_SPEED);
+-            time += (revs / _settings.GetInt(ML_APPROACH_R_SPEED)) * 60.0;    
++            time += (revsApp / _settings.GetInt(ML_APPROACH_R_SPEED)) * 60.0;    
+             time += (zLift - height) / _settings.GetInt(ML_APPROACH_Z_SPEED);
+             press = _settings.GetInt(ML_PRESS);
+             if (press != 0)
+diff --git a/C++/Settings.cpp b/C++/Settings.cpp
+index 8ed16744..9b3232d9 100644
+--- a/C++/Settings.cpp
++++ b/C++/Settings.cpp
+@@ -159,6 +159,7 @@ _errorHandler(NULL)
+             "\"" << ML_APPROACH_Z_JERK     << "\": 100000," <<
+             "\"" << ML_APPROACH_Z_SPEED    << "\": 3000," <<
+             "\"" << ML_ROTATION            << "\": 60000," <<
++            "\"" << ML_ROTATION_APPROACH   << "\": 60000," <<
+             "\"" << ML_EXPOSURE_WAIT       << "\": 0," <<
+             "\"" << ML_SEPARATION_WAIT     << "\": 0," <<
+             "\"" << ML_APPROACH_WAIT       << "\": 0," <<
+diff --git a/C++/include/LayerSettings.h b/C++/include/LayerSettings.h
+index fa6919bf..9b36e4bc 100644
+--- a/C++/include/LayerSettings.h
++++ b/C++/include/LayerSettings.h
+@@ -57,6 +57,7 @@ struct CurrentLayerSettings
+     int SeparationRotJerk;
+     int SeparationRPM;
+     int RotationMilliDegrees;
++    int RotationApproachMilliDegrees;
+     int SeparationZJerk;
+     int SeparationMicronsPerSec;
+     int ZLiftMicrons;
+diff --git a/C++/include/Settings.h b/C++/include/Settings.h
+index bba0378c..172ac688 100644
+--- a/C++/include/Settings.h
++++ b/C++/include/Settings.h
+@@ -108,6 +108,7 @@ constexpr const char* ML_SEPARATION_Z_SPEED  = "ModelSeparationMicronsPerSec";
+ constexpr const char* ML_APPROACH_Z_JERK     = "ModelApproachZJerk";
+ constexpr const char* ML_APPROACH_Z_SPEED    = "ModelApproachMicronsPerSec";
+ constexpr const char* ML_ROTATION            = "ModelRotationMilliDegrees";
++constexpr const char* ML_ROTATION_APPROACH   = "ModelRotationApproachMilliDegrees";
+ constexpr const char* ML_EXPOSURE_WAIT       = "ModelExposureWaitMS";
+ constexpr const char* ML_SEPARATION_WAIT     = "ModelSeparationWaitMS";
+ constexpr const char* ML_APPROACH_WAIT       = "ModelApproachWaitMS";
+-- 
+2.20.1 (Apple Git-117)
+

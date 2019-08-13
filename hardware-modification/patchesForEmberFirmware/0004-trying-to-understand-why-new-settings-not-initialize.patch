@@ -1,0 +1,157 @@
+From a0d39c1ce3f1e9b8b6f59c51ceff7604a205bf36 Mon Sep 17 00:00:00 2001
+From: henriquetmaia <henriquetmaia@gmail.com>
+Date: Mon, 16 Apr 2018 14:16:00 -0400
+Subject: [PATCH 4/5] trying to understand why new settings not initialized
+ correctly
+
+---
+ C++/Motor.cpp        |  7 +++++++
+ C++/PrintEngine.cpp  | 14 ++++++++++++--
+ C++/Settings.cpp     | 17 ++++++++++++++---
+ C++/include/Build.h  |  5 +++--
+ C++/include/Shared.h |  5 ++++-
+ 5 files changed, 40 insertions(+), 8 deletions(-)
+
+diff --git a/C++/Motor.cpp b/C++/Motor.cpp
+index 770b2ba6..b0d6870f 100644
+--- a/C++/Motor.cpp
++++ b/C++/Motor.cpp
+@@ -28,6 +28,9 @@
+ #include <MotorController.h>
+ #include "I_I2C_Device.h"
+ 
++#include <ctime>
++#include <iostream>
++
+ constexpr int DELAY_AFTER_RESET_MSEC  = 500;
+ 
+ // Public constructor, base class opens I2C connection and sets slave address
+@@ -268,6 +271,10 @@ bool Motor::Approach(const CurrentLayerSettings& cls, bool unJamFirst)
+                                     cls.ApproachRPM * R_SPEED_FACTOR));
+     
+     int rotation = cls.RotationApproachMilliDegrees / R_SCALE_FACTOR;
++    std::ofstream outputLog;
++    outputLog.open( "/tmp/my_log_attempt.txt", std::ofstream::trunc );
++    outputLog << "rotation used on approach: " << rotation << std::endl;
++    outputLog.close();
+     if (rotation != 0)
+     {
+         // see if we should use homing on approach, to avoid not rotating far 
+diff --git a/C++/PrintEngine.cpp b/C++/PrintEngine.cpp
+index 1eb8868c..59b53dc7 100644
+--- a/C++/PrintEngine.cpp
++++ b/C++/PrintEngine.cpp
+@@ -1293,7 +1293,7 @@ void PrintEngine::ClearPrintData()
+ // per-layer setting overrides that may change the actual print time.
+ double PrintEngine::GetLayerTimeSec(LayerType type)
+ {
+-    double time, press, revs, zLift;
++    double time, press, revs, revsApp, zLift;
+     double height = _settings.GetInt(LAYER_THICKNESS);
+        
+     switch(type)
+@@ -1570,7 +1570,7 @@ int PrintEngine::GetSeparationTimeoutSec()
+ int PrintEngine::GetApproachTimeoutSec()
+ {
+     // rotational speeds are in RPM
+-    double revs = _cls.RotationMilliDegrees / MILLIDEGREES_PER_REV;
++    double revs = _cls.RotationApproachMilliDegrees / MILLIDEGREES_PER_REV;
+     double time = (revs / _cls.ApproachRPM) * 60.0;    
+     
+     // Z speeds are in microns/s
+@@ -1665,6 +1665,16 @@ void PrintEngine::GetCurrentLayerSettings()
+             _cls.ZLiftMicrons = _perLayer.GetInt(p, ML_Z_LIFT);
+             _cls.ApproachRotJerk = _perLayer.GetInt(p, ML_APPROACH_R_JERK);
+             _cls.ApproachRPM = _perLayer.GetInt(p, ML_APPROACH_R_SPEED);
++
++            _cls.RotationApproachMilliDegrees = _perLayer.GetInt(p, ML_ROTATION_APPROACH);
++
++
++
++            std::ofstream outputLog;
++            outputLog.open( "/tmp/my_log_attempt.txt", std::ofstream::app );
++            outputLog << "rotation used on approach: " << rotation << std::endl;
++
++
+             _cls.ApproachZJerk = _perLayer.GetInt(p, ML_APPROACH_Z_JERK);
+             _cls.ApproachMicronsPerSec = _perLayer.GetInt(p, 
+                                                         ML_APPROACH_Z_SPEED);
+diff --git a/C++/Settings.cpp b/C++/Settings.cpp
+index 9b3232d9..761dc8bf 100644
+--- a/C++/Settings.cpp
++++ b/C++/Settings.cpp
+@@ -208,6 +208,15 @@ _errorHandler(NULL)
+         // but don't call any code that uses Settings!
+         PurgeDirectory(root[PRINT_DATA_DIR].GetString());
+     }
++
++
++    std::ofstream outputLog;
++    std::time_t result = std::time(nullptr);
++    outputLog.open( "/tmp/my_log_attempt.txt", std::ofstream::app );
++    outputLog << std::asctime(std::localtime(&result)) 
++                << "Settings:: IsValidSettingName: " << IsValidSettingName( ML_ROTATION_APPROACH ) << std::endl;
++    outputLog.close();
++
+ }
+ 
+ // Destructor.
+@@ -540,16 +549,18 @@ int Settings::GetInt(const std::string key)
+     int retVal = 0;
+     try
+     {
+-        if (IsValidSettingName(key))
++        if (IsValidSettingName(key)){
+             retVal = 
+             _settingsDoc[SETTINGS_ROOT_KEY][StringRef(key.c_str())].GetInt();
+-        else
++        }
++        else{
+            HandleError(UnknownSetting, true, key.c_str()); 
++        }
+     }
+     catch(std::exception)
+     {
+         HandleError(CantGetSetting, true, key.c_str());
+-    }  
++    }
+     return retVal;
+ }
+ 
+diff --git a/C++/include/Build.h b/C++/include/Build.h
+index b84d954e..bf830727 100644
+--- a/C++/include/Build.h
++++ b/C++/include/Build.h
+@@ -26,9 +26,10 @@
+ #define	BUILD_H
+ 
+ // Date of build
+-constexpr const char* BUILD_DATE = "20160930";
++// constexpr const char* BUILD_DATE = "20160930";
++constexpr const char* BUILD_DATE = "20180416";
+ 
+ // Build attempt on BUILD_DATE
+-constexpr const char* BUILD_NUMBER = "1";
++constexpr const char* BUILD_NUMBER = "2";
+ 
+ #endif    // BUILD_H
+diff --git a/C++/include/Shared.h b/C++/include/Shared.h
+index e9d1faa7..3b9e306f 100644
+--- a/C++/include/Shared.h
++++ b/C++/include/Shared.h
+@@ -25,8 +25,11 @@
+ #ifndef SHARED_H
+ #define	SHARED_H
+ 
++// constexpr const char* VERSION_MAJOR = "3";
++// constexpr const char* VERSION_MINOR = "2";
++
+ constexpr const char* VERSION_MAJOR = "3";
+-constexpr const char* VERSION_MINOR = "2";
++constexpr const char* VERSION_MINOR = "3";
+ 
+ // named pipes
+ constexpr const char* COMMAND_PIPE           = "/tmp/CommandPipe";
+-- 
+2.20.1 (Apple Git-117)
+

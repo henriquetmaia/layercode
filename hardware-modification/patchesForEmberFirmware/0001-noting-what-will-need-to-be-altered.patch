@@ -1,0 +1,28 @@
+From 2fa50595aa1ab463cfa901b3b15d89cf0a102dde Mon Sep 17 00:00:00 2001
+From: henriquetmaia <henriquetmaia@gmail.com>
+Date: Wed, 11 Apr 2018 15:01:02 -0400
+Subject: [PATCH 1/5] noting what will need to be altered
+
+---
+ C++/Settings.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/C++/Settings.cpp b/C++/Settings.cpp
+index 8aa3f002..8ed16744 100644
+--- a/C++/Settings.cpp
++++ b/C++/Settings.cpp
+@@ -167,6 +167,11 @@ _errorHandler(NULL)
+             "\"" << ML_PRESS_WAIT          << "\": 0," <<
+             "\"" << ML_UNPRESS_SPEED       << "\": 3000";
+ 
++            /////////// NEED to set default value for new param here. ML_ROTATION_APPROACH, to match ML_ROTATION
++            /////////// this way, its always set correctly unless we override it in the layersettings.csv file
++            /////////// -- we should always set alternating ML_ROTATION_APPROACH (+ ML_Z_LIFT 60000) to +/- 180000 (+ 60000) for CW and CCW
++            /////////// -- when making switch layers in the csv file: one will be -120000 and the other +240000 ???
++
+     std::ostringstream JSONPrefix;
+     JSONPrefix << "{\"" << SETTINGS_ROOT_KEY << "\":{";
+ 
+-- 
+2.20.1 (Apple Git-117)
+
